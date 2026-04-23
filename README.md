@@ -1,6 +1,6 @@
 # pixivtool
 
-*Download images and videos from Japanese art site [pixiv.net](https://pixiv.net) automatically.*
+Download images and videos from Japanese art site [pixiv.net](https://pixiv.net) automatically.
 
 To start, just run `./pixivtool setup`. (If you're on Linux.)
 
