@@ -1,0 +1,2 @@
+gppt
+python-dotenv
