@@ -25,9 +25,7 @@ async def main():
     # Read settings
     envfile = dotenv.find_dotenv()
     if not envfile:
-        print("No .env file found. Please create one at a common directory to" \
-                "this authentication program and your pixiv-dl installation" \
-                "(e.g. run `touch ../.env`)")
+        print("No .env file found. Please run './pixivtool setup'.")
     dotenv.load_dotenv(envfile)
     username = os.getenv("USERNAME")
     password = os.getenv("PASSWORD")
@@ -45,11 +43,11 @@ async def main():
             ret = await g.login()
         except Exception as e:
             print_chain(e)
-            print("Failed to authenticate. Please run './pixiv-dl login' again.")
+            print("Failed to authenticate. Please run './pixivtool login' again.")
             exit(1)
 
     print("")
-    # Extract data needed for pixiv-dl
+    # Extract data needed for Pixiv API
     refresh_token = ret["refresh_token"]
     if not refresh_token:
         print("Failed to get refresh_token. This may be a bug with GPPT!")
