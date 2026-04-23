@@ -1,0 +1,2 @@
+pixivpy3
+python-dotenv
