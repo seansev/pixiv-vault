@@ -25,7 +25,7 @@ async def main():
     # Read settings
     envfile = dotenv.find_dotenv()
     if not envfile:
-        print("No .env file found. Please run './pixivtool setup'.")
+        print("No .env file found. Please run setup'.")
     dotenv.load_dotenv(envfile)
     username = os.getenv("USERNAME")
     password = os.getenv("PASSWORD")
@@ -43,7 +43,7 @@ async def main():
             ret = await g.login()
         except Exception as e:
             print_chain(e)
-            print("Failed to authenticate. Please run './pixivtool login' again.")
+            print("Failed to authenticate. Please try again.")
             exit(1)
 
     print("")
