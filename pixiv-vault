@@ -83,7 +83,7 @@ cmd_setup() {
         fi
     fi
 
-    info "Setup complete."
+    info "Setup complete. Make sure to log in, then run '$0 download'!"
 
     # Offer to continue to login
     if [ -t 0 ]; then
@@ -110,9 +110,24 @@ cmd_login() {
     exec auth/venv/bin/python auth/main.py
 }
 
+cmd_download() {
+    if [ ! -x pixiv/venv/bin/python ]; then
+        err "Error: pixiv/venv not found. Run '$0 setup' first."
+        exit 1
+    fi
+
+    if [ ! -f pixiv/main.py ]; then
+        err "Error: pixiv/main.py not found. Try re-cloning the repo."
+        exit 1
+    fi
+
+    exec pixiv/venv/bin/python pixiv/main.py
+}
+
 [ $# -eq 1 ] || usage
 case "$1" in
     setup) cmd_setup ;;
     login|auth) cmd_login ;;
+    download) cmd_download ;;
     *)     usage ;;
 esac
