@@ -28,8 +28,8 @@ setup_venv() {
 
     if [ -f "$dir/requirements.txt" ]; then
         info "Installing requirements for $dir"
-        "$venv/bin/pip" install --upgrade pip
-        "$venv/bin/pip" install -r "$dir/requirements.txt"
+        "$venv/bin/python" -m pip install --upgrade pip
+        "$venv/bin/python" -m pip install --upgrade -r "$dir/requirements.txt"
     else
         warn "Warning: $dir/requirements.txt not found, skipping. If the program doesn't work, try re-downloading."
     fi
