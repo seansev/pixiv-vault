@@ -18,6 +18,7 @@ class GalleryDL:
         self._vault_dir = Path(vault_dir) if vault_dir else _DEFAULT_VAULT
         if not vault_dir:
             print(f"WARNING: No vault directory provided! Using {str(_DEFAULT_VAULT)}", file=sys.stderr)
+        self._vault_dir.mkdir(parents=True, exist_ok=True)
 
         # Use a custom config and import our refresh token from GPPT
         self._base_args = [

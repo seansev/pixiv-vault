@@ -16,7 +16,10 @@ def main():
         vault_dir=vault_dir,
     )
 
+    print("Downloading bookmarks:")
     gdl.download_bookmarks()
+
+    print("Downloading followed artists:")
     gdl.download_following()
 
 if __name__ == "__main__":
