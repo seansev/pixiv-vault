@@ -1,9 +1,11 @@
+import os
 import sys
 import subprocess
 from pathlib import Path
 
 _BASE_DIR = Path(__file__).parent
 _DEFAULT_VAULT = _BASE_DIR / 'vault'
+_GALLERY_DL = _BASE_DIR / 'venv' / 'bin' / 'gallery-dl'
 
 class GalleryDL:
     def __init__(self, refresh_token: str, user_id: str, vault_dir: str | None = None):
@@ -22,7 +24,7 @@ class GalleryDL:
 
         # Use a custom config and import our refresh token from GPPT
         self._base_args = [
-            'gallery-dl',
+            str(_GALLERY_DL),
             '--directory', str(self._vault_dir),
             '-o', f'cache.file={str(_BASE_DIR / "cache.sqlite3")}',
             '-o', f'extractor.pixiv.refresh-token={self._refresh_token}',
