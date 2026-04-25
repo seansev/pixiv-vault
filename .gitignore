@@ -1,3 +1,7 @@
+# gallery-dl
+*.sqlite
+*.sqlite3
+
 # Python.gitignore
 # Byte-compiled / optimized / DLL files
 __pycache__/
