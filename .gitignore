@@ -1,3 +1,6 @@
+# Custom
+vault/
+
 # gallery-dl
 *.sqlite
 *.sqlite3
