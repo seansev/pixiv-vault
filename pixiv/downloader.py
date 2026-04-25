@@ -36,7 +36,7 @@ class GalleryDL:
         # Use separate archive DBs for bookmarks and following. This allows us to use a flat layout while still tricking gallery-dl into redownloading files when they become bookmarked, updating the metadata to reflect this change. Works will never be un-bookmarked in the local copy.
         self._bookmarks_args = self._base_args + [
             '--download-archive', str(_BASE_DIR / 'archive_bookmarks.sqlite'),
-            '-o', 'skip=false',
+            #'-o', 'skip=false',
             f'https://www.pixiv.net/users/{self._user_id}/bookmarks/artworks',
         ]
 

@@ -20,8 +20,8 @@ def main():
         print("Downloading bookmarks:")
         gdl.download_bookmarks()
 
-        print("Downloading followed artists:")
-        gdl.download_following()
+        #print("Downloading followed artists:")
+        #gdl.download_following()
     except KeyboardInterrupt:
         print("Skipping remaining downloads.")
         sys.exit(130)
