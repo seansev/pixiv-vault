@@ -29,8 +29,10 @@ class GalleryDL:
             '-o', f'cache.file={str(_BASE_DIR / "cache.sqlite3")}',
             '-o', f'extractor.pixiv.refresh-token={self._refresh_token}',
             '-o', 'extractor.pixiv.directory=[]',
-            '-o', 'extractor.pixiv.ugoira=copy',
-            '-o', 'extractor.postprocessors=[{"name":"metadata"}]',
+            #'-o', 'extractor.pixiv.ugoira=copy',
+            '--ugoira', 'copy',
+            #'-o', 'extractor.postprocessors=[{"name":"metadata"}]',
+            '--write-metadata',
         ]
 
         # Use separate archive DBs for bookmarks and following. This allows us to use a flat layout while still tricking gallery-dl into redownloading files when they become bookmarked, updating the metadata to reflect this change. Works will never be un-bookmarked in the local copy.
