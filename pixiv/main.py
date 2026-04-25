@@ -16,11 +16,15 @@ def main():
         vault_dir=vault_dir,
     )
 
-    print("Downloading bookmarks:")
-    gdl.download_bookmarks()
+    try:
+        print("Downloading bookmarks:")
+        gdl.download_bookmarks()
 
-    print("Downloading followed artists:")
-    gdl.download_following()
+        print("Downloading followed artists:")
+        gdl.download_following()
+    except KeyboardInterrupt:
+        print("Skipping remaining downloads.")
+        sys.exit(130)
 
 if __name__ == "__main__":
     main()

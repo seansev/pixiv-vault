@@ -44,8 +44,15 @@ class GalleryDL:
             f'https://www.pixiv.net/users/{self._user_id}/following',
         ]
 
+    def _download(self, args):
+        try:
+            subprocess.run(args, check=True)
+        except KeyboardInterrupt:
+            print("\nDownload stopped. (Keyboard interrupt)")
+            raise
+
     def download_bookmarks(self):
-        subprocess.run(self._bookmarks_args, check=True)
+        self._download(self._bookmarks_args)
 
     def download_following(self):
-        subprocess.run(self._following_args, check=True)
+        self._download(self._following_args)
