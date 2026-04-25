@@ -15,7 +15,7 @@ class GalleryDL:
         if not self._user_id:
             raise ValueError("No Pixiv user ID provided! Log into Pixiv or regenerate your .env file before attempting to download.")
 
-        self._vault_dir = Path(vault_dir) if vault_dir else _DEFAULT_VAULT
+        self._vault_dir = Path(os.path.expandvars(vault_dir)).expanduser() if vault_dir else _DEFAULT_VAULT
         if not vault_dir:
             print(f"WARNING: No vault directory provided! Using {str(_DEFAULT_VAULT)}", file=sys.stderr)
         self._vault_dir.mkdir(parents=True, exist_ok=True)
