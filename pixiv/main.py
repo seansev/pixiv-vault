@@ -17,6 +17,9 @@ def main():
     )
 
     try:
+        print("Sorting bookmarks...")
+        gdl.sort_bookmarks()
+
         print("Downloading bookmarks:")
         gdl.download_bookmarks()
 
