@@ -1,14 +1,8 @@
 import os
 import sys
+import util
 from dotenv import load_dotenv
 from downloader import GalleryDL
-
-def confirm_continue() -> bool:
-    try:
-        res = input("Continue to next stage? [Y/n] ").strip().lower()
-    except EOFError:
-        return False
-    return res not in ('n', 'no')
 
 def run_stage(func, msg: str | None = None):
     if msg:
@@ -18,7 +12,7 @@ def run_stage(func, msg: str | None = None):
         func()
     except KeyboardInterrupt:
         print("\nStage cancelled. (Keyboard interrupt)")
-        if not confirm_continue():
+        if not util.confirm("Continue to next stage?"):
             raise
 
 def main():
