@@ -3,6 +3,24 @@ import sys
 from dotenv import load_dotenv
 from downloader import GalleryDL
 
+def confirm_continue() -> bool:
+    try:
+        res = input("Continue to next stage? [Y/n] ").strip().lower()
+    except EOFError:
+        return False
+    return res not in ('n', 'no')
+
+def run_stage(func, msg: str | None = None):
+    if msg:
+        print(msg)
+
+    try:
+        func()
+    except KeyboardInterrupt:
+        print("\nStage cancelled. (Keyboard interrupt)")
+        if not confirm_continue():
+            raise
+
 def main():
     load_dotenv()
 
@@ -17,14 +35,12 @@ def main():
     )
 
     try:
-        print("Sorting bookmarks...")
-        gdl.sort_bookmarks()
-
-        print("Downloading bookmarks:")
-        gdl.download_bookmarks()
-
-        #print("Downloading followed artists:")
-        #gdl.download_following()
+        run_stage(gdl.sort_bookmarks,
+                  "Saving bookmark order... (optional, press Ctrl+C to skip)")
+        run_stage(gdl.download_bookmarks,
+                  "Downloading bookmarks: (Ctrl+C to skip)")
+        run_stage(gdl.download_following,
+                  "Downloading followed artists: (Ctrl+C to skip)")
     except KeyboardInterrupt:
         print("Skipping remaining downloads.")
         sys.exit(130)

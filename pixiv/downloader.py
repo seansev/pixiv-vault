@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import subprocess
 from pathlib import Path
@@ -14,6 +15,9 @@ _VIEW_SUBDIR = 'views'
 
 _BOOKMARK_ORDER_FILE = 'bookmark_order.txt'
 _BOOKMARK_ORDER_DROP_THRESHOLD = 0.01
+
+_MAX_ATTEMPTS = 10
+_CURSOR_RE = re.compile(r"-o cursor=(\d+)")
 
 class GalleryDL:
     def __init__(self, refresh_token: str, user_id: str, vault_dir: str | None = None):
@@ -74,17 +78,48 @@ class GalleryDL:
             self._following_url,
         ]
 
-        self._bookmarks_sort_args = self._base_args + [
+        self._sort_bookmarks_args = self._base_args + [
             '--dump-json',
             self._bookmarks_url,
         ]
 
-    def _download(self, args):
-        try:
-            subprocess.run(args, check=True)
-        except KeyboardInterrupt:
-            print("\nDownload stopped. (Keyboard interrupt)")
-            raise
+    def _download(self, args, capture=False):
+        cursor: str | None = None
+
+        for i in range(_MAX_ATTEMPTS):
+            if cursor is not None:
+                print(f"An error occurred, but may be recoverable using the cursor {cursor}. Restarting download... (attempt {i})")
+                args = args + ['-o', f'cursor={cursor}']
+
+            dl = subprocess.run(args,
+                                stdout=subprocess.PIPE if capture else None,
+                                stderr=subprocess.PIPE,
+                                text=True)
+
+            if dl.returncode == 0:
+                return dl.stdout if capture else None
+
+            if dl.returncode == 130:
+                print("\nDownload stopped. (Keyboard interrupt)")
+                raise KeyboardInterrupt()
+
+            print("An error occurred:")
+
+            if dl.stderr:
+                print(dl.stderr, end='', flush=True)
+
+            match = None
+            for line in dl.stderr.splitlines():
+                m = _CURSOR_RE.search(line)
+                if m:
+                    match = m
+
+            if not match:
+                raise subprocess.CalledProcessError(dl.returncode, args, stderr=dl.stderr)
+
+            cursor = match.group(1)
+
+        raise RuntimeError(f"Maximum download attempts reached. gallery-dl exited in failure {_MAX_ATTEMPTS} times.")
 
     def download_bookmarks(self):
         self._download(self._bookmarks_args)
@@ -99,16 +134,8 @@ class GalleryDL:
         order_file = self._order_file
         tmp_file = order_file.with_suffix(order_file.suffix + '.part')
 
-        try:
-            result = subprocess.run(self._bookmarks_sort_args, capture_output=True, text=True, check=True)
-        except KeyboardInterrupt:
-            print("\nCancelled bookmark sorting. (Keyboard interrupt)")
-            res = input("Continue with download anyway? [y/N] ").strip().lower()
-            if res in ('y', 'yes'):
-                return
-            else:
-                raise
-        items = json.loads(result.stdout)
+        stdout = self._download(self._sort_bookmarks_args, capture=True)
+        items = json.loads(stdout)
 
         current: list[str] = []
         seen: set[str] = set()
@@ -136,7 +163,7 @@ class GalleryDL:
         # --- Sanity check: refuse to merge on suspicious drops ---
         if prior_active:
             drop = (len(prior_active) - len(current)) / len(prior_active)
-            if drop > drop_threshold:
+            if drop > self._order_drop_thres:
                 raise RuntimeError(
                     f"Active bookmark count dropped from {len(prior_active)} "
                     f"to {len(current)} ({drop:.1%}); refusing to merge. "
