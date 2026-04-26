@@ -28,13 +28,25 @@ def main():
         vault_dir=vault_dir,
     )
 
+    do_bookmarks_order = util.env_bool("UPDATE_BOOKMARK_ORDER", True)
+    do_bookmarks = util.env_bool("DOWNLOAD_BOOKMARKS", True)
+    do_full_bookmarks = util.env_bool("FULL_BOOKMARK_METADATA", False)
+    do_following = util.env_bool("DOWNLOAD_FOLLOWING", True)
+    do_views = util.env_bool("GENERATE_VIEWS", True)
+
     try:
-        run_stage(gdl.sort_bookmarks,
-                  "Saving bookmark order... (optional, press Ctrl+C to skip)")
-        run_stage(gdl.download_bookmarks,
-                  "Downloading bookmarks: (Ctrl+C to skip)")
-        run_stage(gdl.download_following,
-                  "Downloading followed artists: (Ctrl+C to skip)")
+        if do_bookmarks_order:
+            run_stage(gdl.sort_bookmarks,
+                      "Saving bookmark order... (optional, press Ctrl+C to skip)")
+
+        if do_bookmarks:
+            label = "full" if do_full_bookmarks else "fast"
+            run_stage(lambda: gdl.download_bookmarks(full=do_full_bookmarks),
+                      f"Downloading bookmarks ({label}): (Ctrl+C to skip)")
+
+        if do_following:
+            run_stage(gdl.download_following,
+                      "Downloading followed artists: (Ctrl+C to skip)")
     except KeyboardInterrupt:
         print("Skipping remaining downloads.")
         sys.exit(130)

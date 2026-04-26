@@ -67,6 +67,10 @@ class GalleryDL:
         ]
 
         self._bookmarks_args = self._download_args + [
+            '-o', 'extractor.postprocessors=[{"name":"metadata"}]',
+            self._bookmarks_url,
+        ]
+        self._full_bookmarks_args = self._download_args + [
             '-o', 'metadata-bookmark=true',
             '-o', ('extractor.postprocessors='
                '[{"name":"metadata","event":["file","skip"]}]'),
@@ -121,8 +125,9 @@ class GalleryDL:
 
         raise RuntimeError(f"Maximum download attempts reached. gallery-dl exited in failure {_MAX_ATTEMPTS} times.")
 
-    def download_bookmarks(self):
-        self._download(self._bookmarks_args)
+    def download_bookmarks(self, full = False):
+        args = self._full_bookmarks_args if full else self._bookmarks_args
+        self._download(args)
 
     def download_following(self):
         self._download(self._following_args)
