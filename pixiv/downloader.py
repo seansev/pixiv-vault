@@ -178,7 +178,7 @@ class GalleryDL:
 
         # --- Find the boundary: topmost prior-active ID still present ---
         boundary_id: str | None = None
-        for iid in prior_active:
+        for iid in reversed(prior_active):
             if iid in current_set:
                 boundary_id = iid
                 break
@@ -187,22 +187,23 @@ class GalleryDL:
         if boundary_id is None:
             # First run, or every prior bookmark was removed.
             # Prepend all current IDs; carry the prior file verbatim below.
-            new_ids = current
-            tail = prior
+            new_ids = list(reversed(current))
+            head = prior
         else:
             # Current IDs above the boundary are genuinely new bookmarks.
-            new_ids = current[:current.index(boundary_id)]
+            new_ids = list(reversed(current[:current.index(boundary_id)]))
             # Tail starts at the boundary in the prior file (preserves order).
-            tail = prior[prior.index(boundary_id):]
+            head = prior[:prior.index(boundary_id) + 1]
 
-        new_lines: list[str] = list(new_ids)
-        for entry in tail:
+        new_lines: list[str] = []
+        for entry in head:
             if entry.startswith('#'):
                 new_lines.append(entry)            # already removed, keep marked
             elif entry in current_set:
                 new_lines.append(entry)            # still bookmarked
             else:
                 new_lines.append(f'# {entry}')     # newly removed, mark out
+        new_lines.extend(new_ids)
 
         # --- Write atomically: temp file, then rename ---
         tmp_file.write_text('\n'.join(new_lines) + '\n')
