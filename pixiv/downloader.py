@@ -12,6 +12,7 @@ _GALLERY_DL = _BASE_DIR / 'venv' / 'bin' / 'gallery-dl'
 _STATE_SUBDIR = '.pixiv-vault'
 _DL_SUBDIR = 'artworks'
 _VIEW_SUBDIR = 'views'
+_BOOKMARKS_VIEW_SUBDIR = 'bookmarks'
 
 _BOOKMARK_ORDER_FILE = 'bookmark_order.txt'
 _BOOKMARK_ORDER_DROP_THRESHOLD = 0.01
@@ -40,6 +41,7 @@ class GalleryDL:
         self._dl_dir.mkdir(parents=True, exist_ok=True)
         self._view_dir = self._vault_dir / _VIEW_SUBDIR
         self._view_dir.mkdir(parents=True, exist_ok=True)
+        self._bookmarks_view_dir = self._view_dir / _BOOKMARKS_VIEW_SUBDIR
 
         self._order_file = self._state_dir / _BOOKMARK_ORDER_FILE
         self._order_drop_thres = _BOOKMARK_ORDER_DROP_THRESHOLD
@@ -208,3 +210,72 @@ class GalleryDL:
         # --- Write atomically: temp file, then rename ---
         tmp_file.write_text('\n'.join(new_lines) + '\n')
         tmp_file.replace(order_file)
+
+    def generate_bookmarks_view(self):
+        if not self._order_file.exists():
+            raise RuntimeError(f"No bookmark order file at {str(self._order_file)}. Run sort_bookmarks() first.")
+
+        # Get ordered list of bookmarks
+        # [(illust_id, removed?), ...]
+        order: list[tuple[str, bool]] = []
+        for line in self._order_file.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            is_removed = line.startswith('#')
+            illust_id = line.lstrip('#').strip()
+            order.append((illust_id, is_removed))
+
+        # Index all artworks
+        # Specifically designed for current pixiv filename format:
+        # {id}_p{page}.{jpg/png/mkv/zip}
+        # Filters sidecars by only allowing one "."
+        fname_re = re.compile(r"^(\d+)_p(\d+)\.([^.]+)$")
+        # {illust_id: [(page1, filename), (page2, filename), ...], ...}
+        index: dict[str, list[tuple[int, str]]] = {}
+        for entry in os.scandir(self._dl_dir):
+            # Explicit check, largely unnecessary
+            if entry.name.endswith('.json'):
+                continue
+            f = fname_re.match(entry.name)
+            if not f:
+                continue
+            illust_id, page = f.group(1), int(f.group(2))
+            index.setdefault(illust_id, []).append((page, entry.name))
+        for illust in index:
+            index[illust].sort()
+
+        # Determine necessary padding of numbers
+        pos_width = max(len(str(len(order) - 1)), 1)
+        max_pages = max((len(pages) for pages in index.values()), default=1)
+        page_width = max(len(str(max_pages - 1)), 1)
+
+        # Nuke existing bookmarks view
+        view = self._bookmarks_view_dir
+
+        if view.exists():
+            for entry in os.scandir(view):
+                os.unlink(entry.path)
+        else:
+            view.mkdir(parents=True)
+
+        rel_prefix = os.path.relpath(self._dl_dir, view)
+
+        # Create symlinks
+        created = 0
+        missing = 0
+        for pos, (illust_id, is_removed) in enumerate(order):
+            pages = index.get(illust_id)
+            if not pages:
+                missing += 1
+                continue
+            for page, fname in pages:
+                link_name = f"{pos:0{pos_width}d}_{page:0{page_width}d}_{fname}"
+                os.symlink(f"{rel_prefix}/{fname}", view / link_name)
+                created += 1
+
+        if missing:
+            print(f"Note: {missing} bookmarked illust(s) had no files in "
+                  f"{self._dl_dir} (probably not yet downloaded).",
+                  file=sys.stderr)
+        print(f"Generated bookmarks view: {created} symlinks in {view}")

@@ -6,7 +6,7 @@ from downloader import GalleryDL
 
 def run_stage(func, msg: str | None = None):
     if msg:
-        print(msg)
+        print(msg + " (Ctrl+C to skip)")
 
     try:
         func()
@@ -36,17 +36,21 @@ def main():
 
     try:
         if do_bookmarks_order:
-            run_stage(gdl.sort_bookmarks,
-                      "Saving bookmark order... (optional, press Ctrl+C to skip)")
+            print("Saving bookmark order... (optional, press Ctrl+C to skip)")
+            run_stage(gdl.sort_bookmarks)
 
         if do_bookmarks:
             label = "full" if do_full_bookmarks else "fast"
             run_stage(lambda: gdl.download_bookmarks(full=do_full_bookmarks),
-                      f"Downloading bookmarks ({label}): (Ctrl+C to skip)")
+                      f"Downloading bookmarks ({label}):")
 
         if do_following:
             run_stage(gdl.download_following,
-                      "Downloading followed artists: (Ctrl+C to skip)")
+                      "Downloading followed artists:")
+
+        if do_views:
+            run_stage(gdl.generate_bookmarks_view,
+                      "Generating view for bookmarked works:")
     except KeyboardInterrupt:
         print("Skipping remaining downloads.")
         sys.exit(130)
