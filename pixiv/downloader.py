@@ -9,6 +9,9 @@ _BASE_DIR = Path(__file__).parent
 _DEFAULT_VAULT = _BASE_DIR / 'vault'
 _GALLERY_DL = _BASE_DIR / 'venv' / 'bin' / 'gallery-dl'
 
+_MINOR_SEPARATOR = '_'
+_MAJOR_SEPARATOR = '-'
+
 _STATE_SUBDIR = '.pixiv-vault'
 _DL_SUBDIR = 'artworks'
 _VIEW_SUBDIR = 'views'
@@ -281,7 +284,7 @@ class GalleryDL:
                 missing += 1
                 continue
             for page, fname in pages:
-                link_name = f"{pos:0{pos_width}d}_{page:0{page_width}d}_{fname}"
+                link_name = f"{pos:0{pos_width}d}{_MINOR_SEPARATOR}{page:0{page_width}d}{_MAJOR_SEPARATOR}{fname}"
                 os.symlink(f"{rel_prefix}/{fname}", view / link_name)
                 created += 1
 
@@ -307,7 +310,7 @@ class GalleryDL:
         created = 0
         for illust_id in index:
             for page, fname in index[illust_id]:
-                link_name = f"{illust_id:>0{max_id_len}}_{page:0{page_width}d}_{fname}"
+                link_name = f"{illust_id:>0{max_id_len}}{_MINOR_SEPARATOR}{page:0{page_width}d}{_MAJOR_SEPARATOR}{fname}"
                 os.symlink(f"{rel_prefix}/{fname}", view / link_name)
                 created += 1
 
@@ -333,7 +336,7 @@ class GalleryDL:
                 if not (self._dl_dir / sidecar).exists():
                     missing += 1
                     continue
-                link_name = f"{illust_id:>0{max_id_len}}_{page:0{page_width}d}_{sidecar}"
+                link_name = f"{illust_id:>0{max_id_len}}{_MINOR_SEPARATOR}{page:0{page_width}d}{_MAJOR_SEPARATOR}{sidecar}"
                 os.symlink(f"{rel_prefix}/{sidecar}", view / link_name)
                 created += 1
 
