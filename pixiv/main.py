@@ -33,6 +33,7 @@ def main():
     do_full_bookmarks = util.env_bool("FULL_BOOKMARK_METADATA", False)
     do_following = util.env_bool("DOWNLOAD_FOLLOWING", True)
     do_views = util.env_bool("GENERATE_VIEWS", True)
+    do_newest_first = util.env_bool("VIEW_NEWEST_FIRST", False)
 
     try:
         if do_bookmarks_order:
@@ -49,7 +50,7 @@ def main():
                       "Downloading followed artists:")
 
         if do_views:
-            run_stage(gdl.generate_bookmarks_view,
+            run_stage(lambda: gdl.generate_bookmarks_view(newest_first=do_newest_first),
                       "Generating view for bookmarked works:")
             run_stage(gdl.generate_media_view,
                       "Generating view for media-only:")

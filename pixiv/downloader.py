@@ -247,7 +247,7 @@ class GalleryDL:
         else:
             view.mkdir(parents=True)
 
-    def generate_bookmarks_view(self):
+    def generate_bookmarks_view(self, newest_first = False):
         if not self._order_file.exists():
             raise RuntimeError(f"No bookmark order file at {str(self._order_file)}. Run sort_bookmarks() first.")
 
@@ -261,6 +261,9 @@ class GalleryDL:
             is_removed = line.startswith('#')
             illust_id = line.lstrip('#').strip()
             order.append((illust_id, is_removed))
+
+        if newest_first:
+            order.reverse()
 
         index = self._index_artworks()
 
