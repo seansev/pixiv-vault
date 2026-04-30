@@ -13,6 +13,7 @@ _STATE_SUBDIR = '.pixiv-vault'
 _DL_SUBDIR = 'artworks'
 _VIEW_SUBDIR = 'views'
 _BOOKMARKS_VIEW_SUBDIR = 'bookmarks'
+_MEDIA_VIEW_SUBDIR = 'media'
 
 _BOOKMARK_ORDER_FILE = 'bookmark_order.txt'
 _BOOKMARK_ORDER_DROP_THRESHOLD = 0.01
@@ -37,11 +38,11 @@ class GalleryDL:
 
         self._state_dir = self._vault_dir / _STATE_SUBDIR
         self._state_dir.mkdir(parents=True, exist_ok=True)
+
         self._dl_dir = self._vault_dir / _DL_SUBDIR
-        self._dl_dir.mkdir(parents=True, exist_ok=True)
         self._view_dir = self._vault_dir / _VIEW_SUBDIR
-        self._view_dir.mkdir(parents=True, exist_ok=True)
         self._bookmarks_view_dir = self._view_dir / _BOOKMARKS_VIEW_SUBDIR
+        self._media_view_dir = self._view_dir / _MEDIA_VIEW_SUBDIR
 
         self._order_file = self._state_dir / _BOOKMARK_ORDER_FILE
         self._order_drop_thres = _BOOKMARK_ORDER_DROP_THRESHOLD
@@ -91,6 +92,8 @@ class GalleryDL:
 
     def _download(self, args, capture=False):
         cursor: str | None = None
+
+        self._dl_dir.mkdir(parents=True, exist_ok=True)
 
         for i in range(_MAX_ATTEMPTS):
             if cursor is not None:
@@ -211,21 +214,7 @@ class GalleryDL:
         tmp_file.write_text('\n'.join(new_lines) + '\n')
         tmp_file.replace(order_file)
 
-    def generate_bookmarks_view(self):
-        if not self._order_file.exists():
-            raise RuntimeError(f"No bookmark order file at {str(self._order_file)}. Run sort_bookmarks() first.")
-
-        # Get ordered list of bookmarks
-        # [(illust_id, removed?), ...]
-        order: list[tuple[str, bool]] = []
-        for line in self._order_file.read_text().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            is_removed = line.startswith('#')
-            illust_id = line.lstrip('#').strip()
-            order.append((illust_id, is_removed))
-
+    def _index_artworks(self):
         # Index all artworks
         # Specifically designed for current pixiv filename format:
         # {id}_p{page}.{jpg/png/mkv/zip}
@@ -244,6 +233,31 @@ class GalleryDL:
             index.setdefault(illust_id, []).append((page, entry.name))
         for illust in index:
             index[illust].sort()
+        return index
+
+    def _reset_view_dir(self, view: Path):
+        if view.exists():
+            for entry in os.scandir(view):
+                os.unlink(entry.path)
+        else:
+            view.mkdir(parents=True)
+
+    def generate_bookmarks_view(self):
+        if not self._order_file.exists():
+            raise RuntimeError(f"No bookmark order file at {str(self._order_file)}. Run sort_bookmarks() first.")
+
+        # Get ordered list of bookmarks
+        # [(illust_id, removed?), ...]
+        order: list[tuple[str, bool]] = []
+        for line in self._order_file.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            is_removed = line.startswith('#')
+            illust_id = line.lstrip('#').strip()
+            order.append((illust_id, is_removed))
+
+        index = self._index_artworks()
 
         # Determine necessary padding of numbers
         pos_width = max(len(str(len(order) - 1)), 1)
@@ -252,12 +266,7 @@ class GalleryDL:
 
         # Nuke existing bookmarks view
         view = self._bookmarks_view_dir
-
-        if view.exists():
-            for entry in os.scandir(view):
-                os.unlink(entry.path)
-        else:
-            view.mkdir(parents=True)
+        self._reset_view_dir(view)
 
         rel_prefix = os.path.relpath(self._dl_dir, view)
 
@@ -279,3 +288,26 @@ class GalleryDL:
                   f"{self._dl_dir} (probably not yet downloaded).",
                   file=sys.stderr)
         print(f"Generated bookmarks view: {created} symlinks in {view}")
+
+    def generate_media_view(self):
+        view = self._media_view_dir
+
+        index = self._index_artworks()
+        self._reset_view_dir(view)
+
+        # Determine padding for lexical ordering
+        max_id_len = max((len(illust_id) for illust_id in index), default=1)
+        max_pages = max((len(pages) for pages in index.values()), default=1)
+        page_width = max(len(str(max_pages - 1)), 1)
+
+        rel_prefix = os.path.relpath(self._dl_dir, view)
+
+        created = 0
+        for illust_id in sorted(index):
+            for page, fname in index[illust_id]:
+                link_name = f"{illust_id:>0{max_id_len}}_{page:0{page_width}d}_{fname}"
+                os.symlink(f"{rel_prefix}/{fname}", view / link_name)
+                created += 1
+
+        print(f"Generated media-only view: {created} symlinks in {view}")
+

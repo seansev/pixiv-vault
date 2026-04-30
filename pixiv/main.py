@@ -51,6 +51,8 @@ def main():
         if do_views:
             run_stage(gdl.generate_bookmarks_view,
                       "Generating view for bookmarked works:")
+            run_stage(gdl.generate_media_view,
+                      "Generating view for media-only:")
     except KeyboardInterrupt:
         print("Skipping remaining downloads.")
         sys.exit(130)
