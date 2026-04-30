@@ -18,6 +18,7 @@ _VIEW_SUBDIR = 'views'
 _BOOKMARKS_VIEW_SUBDIR = 'bookmarks'
 _MEDIA_VIEW_SUBDIR = 'media'
 _METADATA_VIEW_SUBDIR = 'metadata'
+_ARTISTS_VIEW_SUBDIR = 'artists'
 
 _BOOKMARK_ORDER_FILE = 'bookmark_order.txt'
 _BOOKMARK_ORDER_DROP_THRESHOLD = 0.01
@@ -48,6 +49,7 @@ class GalleryDL:
         self._bookmarks_view_dir = self._view_dir / _BOOKMARKS_VIEW_SUBDIR
         self._media_view_dir = self._view_dir / _MEDIA_VIEW_SUBDIR
         self._metadata_view_dir = self._view_dir / _METADATA_VIEW_SUBDIR
+        self._artists_view_dir = self._view_dir / _ARTISTS_VIEW_SUBDIR
 
         self._order_file = self._state_dir / _BOOKMARK_ORDER_FILE
         self._order_drop_thres = _BOOKMARK_ORDER_DROP_THRESHOLD
@@ -55,6 +57,8 @@ class GalleryDL:
         # Set API URLs
         self._bookmarks_url = f'https://www.pixiv.net/users/{self._user_id}/bookmarks/artworks'
         self._following_url = f'https://www.pixiv.net/users/{self._user_id}/following'
+
+        self._index: dict[str, list[tuple[int, str]]] = None
 
         # Use a custom config and import our refresh token from GPPT
         self._executable = [str(_GALLERY_DL)]
@@ -220,6 +224,8 @@ class GalleryDL:
         tmp_file.replace(order_file)
 
     def _index_artworks(self):
+        if self._index is not None:
+            return self._index
         # Index all artworks
         # Specifically designed for current pixiv filename format:
         # {id}_p{page}.{jpg/png/mkv/zip}
@@ -238,14 +244,26 @@ class GalleryDL:
             index.setdefault(illust_id, []).append((page, entry.name))
         for illust in index:
             index[illust].sort()
-        return index
+        self._index = index
+        return self._index
 
     def _reset_view_dir(self, view: Path):
         if view.exists():
             for entry in os.scandir(view):
-                os.unlink(entry.path)
+                if entry.is_dir():
+                    self._remove_tree(Path(entry.path))
+                else:
+                    os.unlink(entry.path)
         else:
             view.mkdir(parents=True)
+
+    def _remove_tree(self, path: Path):
+        for entry in os.scandir(path):
+            if entry.is_dir():
+                self._remove_tree(Path(entry.path))
+            else:
+                os.unlink(entry.path)
+        os.rmdir(path)
 
     def generate_bookmarks_view(self, newest_first = False):
         if not self._order_file.exists():
@@ -348,3 +366,53 @@ class GalleryDL:
                   f"{self._dl_dir} (were they manually deleted?).",
                   file=sys.stderr)
         print(f"Generated metadata-only view: {created} symlinks in {view}")
+
+    def generate_artists_view(self):
+        view = self._artists_view_dir
+
+        index = self._index_artworks()
+
+        # {(user_id, account): {illust_id: [(page, fname), (...)], [...]}, {...}}
+        artists: dict[tuple[str, str], dict[str, list[tuple[int, str]]]] = {}
+        bad_sidecars = 0
+        for illust_id, files in index.items():
+            sidecar_path = self._dl_dir / (files[0][1] + '.json')
+            if not sidecar_path.exists():
+                bad_sidecars += 1
+                continue
+            try:
+                data = json.loads(sidecar_path.read_text())
+                user = data['user']
+                user_id = str(user['id'])
+                account = user.get('account') or 'unknown'
+            except (json.JSONDecodeError, KeyError, TypeError):
+                bad_sidecars += 1
+                continue
+            key = (user_id, account)
+            artists.setdefault(key, {})[illust_id] = files
+
+        self._reset_view_dir(view)
+
+        rel_prefix = os.path.relpath(self._dl_dir, view)
+
+        created = 0
+        for (user_id, account), artist_index in artists.items():
+            artist_dir = view / f"{account}_{user_id}"
+            artist_dir.mkdir()
+
+            max_id_len = max((len(illust_id) for illust_id in artist_index))
+            max_pages = max((len(pages) for pages in artist_index.values()))
+            page_width = max(len(str(max_pages - 1)), 1)
+
+            artist_rel_prefix = os.path.relpath(self._dl_dir, artist_dir)
+
+            for illust_id, files in artist_index.items():
+                for page, fname in files:
+                    link_name = f"{illust_id:>0{max_id_len}}_{page:0{page_width}d}_{fname}"
+                    os.symlink(f"{artist_rel_prefix}/{fname}", artist_dir / link_name)
+                    created += 1
+
+        if bad_sidecars:
+            print(f"Note: {bad_sidecars} .json metadata sidecars failed to load from {self._dl_dir} (were they deleted?)")
+ 
+        print(f"Generated artists view: {len(artists)} artists, {created} symlinks in {view}")

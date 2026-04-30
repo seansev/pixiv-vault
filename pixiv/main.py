@@ -56,6 +56,8 @@ def main():
                       "Generating view for media-only:")
             run_stage(gdl.generate_metadata_view,
                       "Generating view for metadata-only:")
+            run_stage(gdl.generate_artists_view,
+                      "Generating view for works by artist:")
     except KeyboardInterrupt:
         print("Skipping remaining downloads.")
         sys.exit(130)
