@@ -53,6 +53,8 @@ def main():
                       "Generating view for bookmarked works:")
             run_stage(gdl.generate_media_view,
                       "Generating view for media-only:")
+            run_stage(gdl.generate_metadata_view,
+                      "Generating view for metadata-only:")
     except KeyboardInterrupt:
         print("Skipping remaining downloads.")
         sys.exit(130)

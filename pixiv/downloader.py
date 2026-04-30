@@ -14,6 +14,7 @@ _DL_SUBDIR = 'artworks'
 _VIEW_SUBDIR = 'views'
 _BOOKMARKS_VIEW_SUBDIR = 'bookmarks'
 _MEDIA_VIEW_SUBDIR = 'media'
+_METADATA_VIEW_SUBDIR = 'metadata'
 
 _BOOKMARK_ORDER_FILE = 'bookmark_order.txt'
 _BOOKMARK_ORDER_DROP_THRESHOLD = 0.01
@@ -43,6 +44,7 @@ class GalleryDL:
         self._view_dir = self._vault_dir / _VIEW_SUBDIR
         self._bookmarks_view_dir = self._view_dir / _BOOKMARKS_VIEW_SUBDIR
         self._media_view_dir = self._view_dir / _MEDIA_VIEW_SUBDIR
+        self._metadata_view_dir = self._view_dir / _METADATA_VIEW_SUBDIR
 
         self._order_file = self._state_dir / _BOOKMARK_ORDER_FILE
         self._order_drop_thres = _BOOKMARK_ORDER_DROP_THRESHOLD
@@ -303,7 +305,7 @@ class GalleryDL:
         rel_prefix = os.path.relpath(self._dl_dir, view)
 
         created = 0
-        for illust_id in sorted(index):
+        for illust_id in index:
             for page, fname in index[illust_id]:
                 link_name = f"{illust_id:>0{max_id_len}}_{page:0{page_width}d}_{fname}"
                 os.symlink(f"{rel_prefix}/{fname}", view / link_name)
@@ -311,3 +313,32 @@ class GalleryDL:
 
         print(f"Generated media-only view: {created} symlinks in {view}")
 
+    def generate_metadata_view(self):
+        view = self._metadata_view_dir
+
+        index = self._index_artworks()
+        self._reset_view_dir(view)
+
+        rel_prefix = os.path.relpath(self._dl_dir, view)
+
+        max_id_len = max((len(illust_id) for illust_id in index), default=1)
+        max_pages = max((len(pages) for pages in index.values()), default=1)
+        page_width = max(len(str(max_pages - 1)), 1)
+
+        created = 0
+        missing = 0
+        for illust_id in index:
+            for page, fname in index[illust_id]:
+                sidecar = fname + '.json'
+                if not (self._dl_dir / sidecar).exists():
+                    missing += 1
+                    continue
+                link_name = f"{illust_id:>0{max_id_len}}_{page:0{page_width}d}_{sidecar}"
+                os.symlink(f"{rel_prefix}/{sidecar}", view / link_name)
+                created += 1
+
+        if missing:
+            print(f"Note: {missing} artworks had no .json sidecars in "
+                  f"{self._dl_dir} (were they manually deleted?).",
+                  file=sys.stderr)
+        print(f"Generated metadata-only view: {created} symlinks in {view}")
