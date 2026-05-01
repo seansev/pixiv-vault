@@ -2,7 +2,7 @@ import os
 import sys
 import util
 from dotenv import load_dotenv
-from downloader import GalleryDL
+from pixivault import Vault
 
 def run_stage(func, msg: str | None = None):
     if msg:

@@ -26,7 +26,7 @@ _BOOKMARK_ORDER_DROP_THRESHOLD = 0.01
 _MAX_ATTEMPTS = 10
 _CURSOR_RE = re.compile(r"-o cursor=(\d+)")
 
-class GalleryDL:
+class Vault:
     def __init__(self, refresh_token: str, user_id: str, vault_dir: str | None = None):
         self._refresh_token = refresh_token
         if not self._refresh_token:
