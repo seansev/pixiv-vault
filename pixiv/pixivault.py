@@ -230,7 +230,7 @@ class Vault:
         # Specifically designed for current pixiv filename format:
         # {id}_p{page}.{jpg/png/mkv/zip}
         # Filters sidecars by only allowing one "."
-        fname_re = re.compile(r"^(\d+)_p(\d+)\.([^.]+)$")
+        fname_re = re.compile(r"^(\d+)_p(\d+)\.[^.]+$")
         # {illust_id: [(page1, filename), (page2, filename), ...], ...}
         index: dict[str, list[tuple[int, str]]] = {}
         for entry in os.scandir(self._dl_dir):
