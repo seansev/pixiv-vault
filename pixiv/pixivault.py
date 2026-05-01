@@ -373,7 +373,7 @@ class Vault:
         index = self._index_artworks()
 
         # {(user_id, account): {illust_id: [(page, fname), (...)], [...]}, {...}}
-        artists: dict[tuple[str, str], dict[str, list[tuple[int, str]]]] = {}
+        artists: dict[tuple[str, str], dict] = {}
         bad_sidecars = 0
         for illust_id, files in index.items():
             sidecar_path = self._dl_dir / (files[0][1] + '.json')
@@ -385,20 +385,42 @@ class Vault:
                 user = data['user']
                 user_id = str(user['id'])
                 account = user.get('account') or 'unknown'
+                is_followed = bool(user.get('is_followed', False))
             except (json.JSONDecodeError, KeyError, TypeError):
                 bad_sidecars += 1
                 continue
             key = (user_id, account)
-            artists.setdefault(key, {})[illust_id] = files
+            artist = artists.setdefault(key, {'illusts': {}, 'is_followed': is_followed})
+            artist['illusts'][illust_id] = files
+            artist['is_followed'] = is_followed
+
+        # Get followed status from highest ID artwork
+        for key, artist in artists.items():
+            latest = max(artist['illusts'], key=int)
+            sidecar = self._dl_dir / (artist['illusts'][latest][0][1] + '.json')
+            try:
+                data = json.loads(sidecar.read_text())
+                artist['is_followed'] = bool(data['user'].get('is_followed', False))
+            except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError):
+                # Already set by random artwork or default of False
+                pass
 
         self._reset_view_dir(view)
 
         rel_prefix = os.path.relpath(self._dl_dir, view)
 
         created = 0
-        for (user_id, account), artist_index in artists.items():
-            artist_dir = view / f"{account}_{user_id}"
-            artist_dir.mkdir()
+        followed = 0
+        unfollowed = 0
+        for (user_id, account), artist in artists.items():
+            if artist['is_followed']:
+                followed += 1
+            else:
+                unfollowed += 1
+            artist_dir = view / ('followed' if artist['is_followed'] else 'unfollowed') / f"{account}_{user_id}"
+            artist_dir.mkdir(parents=True, exist_ok=True)
+            
+            artist_index = artist['illusts']
 
             max_id_len = max((len(illust_id) for illust_id in artist_index))
             max_pages = max((len(pages) for pages in artist_index.values()))
@@ -415,4 +437,4 @@ class Vault:
         if bad_sidecars:
             print(f"Note: {bad_sidecars} .json metadata sidecars failed to load from {self._dl_dir} (were they deleted?)")
  
-        print(f"Generated artists view: {len(artists)} artists, {created} symlinks in {view}")
+        print(f"Generated artists view: {len(artists)} artists ({followed} followed, {unfollowed} unfollowed), {created} symlinks in {view}")
