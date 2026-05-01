@@ -22,7 +22,7 @@ def main():
     user_id = os.getenv("USER_ID")
     vault_dir = os.getenv("VAULT_DIR")
 
-    gdl = GalleryDL(
+    vault = Vault(
         refresh_token=refresh_token,
         user_id=user_id,
         vault_dir=vault_dir,
@@ -38,25 +38,25 @@ def main():
     try:
         if do_bookmarks_order:
             print("Saving bookmark order... (optional, press Ctrl+C to skip)")
-            run_stage(gdl.sort_bookmarks)
+            run_stage(vault.sort_bookmarks)
 
         if do_bookmarks:
             label = "full" if do_full_bookmarks else "fast"
-            run_stage(lambda: gdl.download_bookmarks(full=do_full_bookmarks),
+            run_stage(lambda: vault.download_bookmarks(full=do_full_bookmarks),
                       f"Downloading bookmarks ({label}):")
 
         if do_following:
-            run_stage(gdl.download_following,
+            run_stage(vault.download_following,
                       "Downloading followed artists:")
 
         if do_views:
-            run_stage(lambda: gdl.generate_bookmarks_view(newest_first=do_newest_first),
+            run_stage(lambda: vault.generate_bookmarks_view(newest_first=do_newest_first),
                       "Generating view for bookmarked works:")
-            run_stage(gdl.generate_media_view,
+            run_stage(vault.generate_media_view,
                       "Generating view for media-only:")
-            run_stage(gdl.generate_metadata_view,
+            run_stage(vault.generate_metadata_view,
                       "Generating view for metadata-only:")
-            run_stage(gdl.generate_artists_view,
+            run_stage(vault.generate_artists_view,
                       "Generating view for works by artist:")
     except KeyboardInterrupt:
         print("Skipping remaining downloads.")
