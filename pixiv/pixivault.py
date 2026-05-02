@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import subprocess
+from collections import Counter
 from pathlib import Path
 
 _BASE_DIR = Path(__file__).parent
@@ -19,6 +20,7 @@ _BOOKMARKS_VIEW_SUBDIR = 'bookmarks'
 _MEDIA_VIEW_SUBDIR = 'media'
 _METADATA_VIEW_SUBDIR = 'metadata'
 _ARTISTS_VIEW_SUBDIR = 'artists'
+_STATISTICS_SUBDIR = 'statistics'
 
 _BOOKMARK_ORDER_FILE = 'bookmark_order.txt'
 _BOOKMARK_ORDER_DROP_THRESHOLD = 0.01
@@ -50,6 +52,7 @@ class Vault:
         self._media_view_dir = self._view_dir / _MEDIA_VIEW_SUBDIR
         self._metadata_view_dir = self._view_dir / _METADATA_VIEW_SUBDIR
         self._artists_view_dir = self._view_dir / _ARTISTS_VIEW_SUBDIR
+        self._statistics_dir = self._vault_dir / _STATISTICS_SUBDIR
 
         self._order_file = self._state_dir / _BOOKMARK_ORDER_FILE
         self._order_drop_thres = _BOOKMARK_ORDER_DROP_THRESHOLD
@@ -71,6 +74,7 @@ class Vault:
             '-o', 'skip=true',
             '-o', 'extractor.pixiv.directory=[]',
             '-o', 'extractor.pixiv.ugoira=true',
+            '-o', 'extractor.pixiv.tags=original',
             '-o', ('extractor.pixiv.postprocessors='
                '[{"name":"ugoira","extension":"mkv",'
                '"ffmpeg-args":["-c:v","copy"],'
@@ -438,3 +442,71 @@ class Vault:
             print(f"Note: {bad_sidecars} .json metadata sidecars failed to load from {self._dl_dir} (were they deleted?)")
  
         print(f"Generated artists view: {len(artists)} artists ({followed} followed, {unfollowed} unfollowed), {created} symlinks in {view}")
+
+    def _write_counts(self, path: Path, rows: list[tuple], delim: str = '\t'):
+        if not rows:
+            path.write_text('')
+            return
+
+        width = len(str(max(row[0] for row in rows)))
+        sorted_rows = sorted(rows, key=lambda r: (-r[0], r[1:]))
+        lines = [
+            f"{row[0]:>{width}}\t" + '\t'.join(row[1:])
+            for row in sorted_rows
+        ]
+
+        path.write_text('\n'.join(lines) + '\n')
+
+    def generate_statistics(self):
+        stats_dir = self._statistics_dir
+        stats_dir.mkdir(parents=True, exist_ok=True)
+
+        index = self._index_artworks()
+
+        tags: Counter[str] = Counter()
+        tags_bookmarked: Counter[str] = Counter()
+        translations: dict[str, str] = {}
+
+        bad_sidecars = 0
+        for illust_id, files in index.items():
+            sidecar_path = self._dl_dir / (files[0][1] + '.json')
+            if not sidecar_path.exists():
+                bad_sidecars += 1
+                continue
+            try:
+                data = json.loads(sidecar_path.read_text())
+                is_bookmarked = bool(data.get('is_bookmarked', False))
+                sidecar_tags = data.get('tags', [])
+            except (json.JSONDecodeError, KeyError, TypeError):
+                bad_sidecars += 1
+                continue
+
+            for tag in sidecar_tags:
+                if isinstance(tag, dict):
+                    name = tag.get('name')
+                    translated = tag.get('translated_name')
+                elif isinstance(tag, str):
+                    name = tag
+                    translated = None
+                else:
+                    continue
+                if not name:
+                    continue
+                tags[name] += 1
+                if is_bookmarked:
+                    tags_bookmarked[name] += 1
+                if translated:
+                    translations[name] = translated.replace('\t', ' ')
+
+        rows = [(count, tag, translations.get(tag, ''))
+                for tag, count in tags.items()]
+        rows_bookmarked = [(count, tag, translations.get(tag, ''))
+                           for tag, count in tags_bookmarked.items()]
+
+        self._write_counts(stats_dir / 'tag_counts.txt', rows)
+        self._write_counts(stats_dir / 'tag_counts_bookmarked.txt', rows_bookmarked)
+
+        if bad_sidecars:
+            print(f"Note: {bad_sidecars} .json metadata sidecars failed to load from {self._dl_dir} (were they deleted?)")
+ 
+        print(f"Generated tag statistics: {len(tags)} unique tags, {len(tags_bookmarked)} in bookmarks.")

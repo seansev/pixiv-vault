@@ -34,6 +34,7 @@ def main():
     do_following = util.env_bool("DOWNLOAD_FOLLOWING", True)
     do_views = util.env_bool("GENERATE_VIEWS", True)
     do_newest_first = util.env_bool("VIEW_NEWEST_FIRST", False)
+    do_statistics = util.env_bool("GENERATE_STATISTICS", True)
 
     try:
         if do_bookmarks_order:
@@ -58,6 +59,10 @@ def main():
                       "Generating view for metadata-only:")
             run_stage(vault.generate_artists_view,
                       "Generating view for works by artist:")
+
+        if do_statistics:
+            run_stage(vault.generate_statistics,
+                      "Generating statistics:")
     except KeyboardInterrupt:
         print("Skipping remaining downloads.")
         sys.exit(130)
