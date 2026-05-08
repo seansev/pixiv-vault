@@ -59,6 +59,7 @@ class Vault:
         self._order_drop_thres = _BOOKMARK_ORDER_DROP_THRESHOLD
 
         # Set API URLs
+        self._artworks_url_prefix = 'https://www.pixiv.net/artworks/'
         self._bookmarks_url = f'https://www.pixiv.net/users/{self._user_id}/bookmarks/artworks'
         self._following_url = f'https://www.pixiv.net/users/{self._user_id}/following'
 
@@ -81,6 +82,12 @@ class Vault:
                '"ffmpeg-args":["-c:v","copy"],'
                '"repeat-last-frame":false}]'),
             '--directory', str(self._dl_dir),
+        ]
+
+        self._artworks_args = self._download_args + [
+            '-o', 'metadata-bookmark=true',
+            '-o', ('extractor.postprocessors='
+               '[{"name":"metadata","event":["file","skip"]}]'),
         ]
 
         self._bookmarks_args = self._download_args + [
@@ -143,6 +150,10 @@ class Vault:
             cursor = match.group(1)
 
         raise RuntimeError(f"Maximum download attempts reached. gallery-dl exited in failure {_MAX_ATTEMPTS} times.")
+
+    def download_artwork(self, artwork_id):
+        args = self._artworks_args + [self._artworks_url_prefix + str(artwork_id)]
+        self._download(args)
 
     def download_bookmarks(self, full = False):
         args = self._full_bookmarks_args if full else self._bookmarks_args
