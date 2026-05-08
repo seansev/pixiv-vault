@@ -7,7 +7,8 @@ from collections import Counter
 from pathlib import Path
 
 _BASE_DIR = Path(__file__).parent
-_DEFAULT_VAULT = _BASE_DIR / 'vault'
+_OUTER_DIR = _BASE_DIR.parent
+_DEFAULT_VAULT = _OUTER_DIR / 'vault'
 _GALLERY_DL = _BASE_DIR / 'venv' / 'bin' / 'gallery-dl'
 
 _MINOR_SEPARATOR = '_'
