@@ -9,7 +9,7 @@ err()  { printf "==> %s\n" "$1" >&2; }
 ask()  { printf "\n ?  %s %s " "$1" "$2"; }
 
 usage() {
-    echo "Usage: $0 {setup|login}" >&2
+    echo "Usage: $0 {setup|login|download}" >&2
     exit 1
 }
 
