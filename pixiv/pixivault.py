@@ -21,6 +21,7 @@ _BOOKMARKS_VIEW_SUBDIR = 'bookmarks'
 _MEDIA_VIEW_SUBDIR = 'media'
 _METADATA_VIEW_SUBDIR = 'metadata'
 _ARTISTS_VIEW_SUBDIR = 'artists'
+_NEW_VIEW_SUBDIR = 'new'
 _STATISTICS_SUBDIR = 'statistics'
 
 _BOOKMARK_ORDER_FILE = 'bookmark_order.txt'
@@ -53,6 +54,7 @@ class Vault:
         self._media_view_dir = self._view_dir / _MEDIA_VIEW_SUBDIR
         self._metadata_view_dir = self._view_dir / _METADATA_VIEW_SUBDIR
         self._artists_view_dir = self._view_dir / _ARTISTS_VIEW_SUBDIR
+        self._new_view_dir = self._view_dir / _NEW_VIEW_SUBDIR
         self._statistics_dir = self._vault_dir / _STATISTICS_SUBDIR
 
         self._order_file = self._state_dir / _BOOKMARK_ORDER_FILE
@@ -451,9 +453,55 @@ class Vault:
                     created += 1
 
         if bad_sidecars:
-            print(f"Note: {bad_sidecars} .json metadata sidecars failed to load from {self._dl_dir} (were they deleted?)")
+            print(f"Note: {bad_sidecars} .json metadata sidecars failed to load "
+                  f"from {self._dl_dir} (were they deleted?).",
+                  file=sys.stderr)
  
         print(f"Generated artists view: {len(artists)} artists ({followed} followed, {unfollowed} unfollowed), {created} symlinks in {view}")
+
+    def generate_new_view(self):
+        view = self._new_view_dir
+
+        index = self._index_artworks()
+
+        # Collect (create_date, illust_id, files) for all works
+        entries: list[tuple[str, str, list]] = []
+        bad_sidecars = 0
+        for illust_id, files in index.items():
+            sidecar_path = self._dl_dir / (files[0][1] + '.json')
+            if not sidecar_path.exists():
+                bad_sidecars += 1
+                continue
+            try:
+                data = json.loads(sidecar_path.read_text())
+                create_date = data['create_date']
+            except (json.JSONDecodeError, KeyError, TypeError):
+                bad_sidecars += 1
+                continue
+            entries.append((create_date, illust_id, files))
+
+        entries.sort(key=lambda e: e[0], reverse=True)
+
+        self._reset_view_dir(view / 'all')
+        all_prefix = os.path.relpath(self._dl_dir, view / 'all')
+
+        # Determine necessary padding of numbers
+        pos_width = max(len(str(len(entries) - 1)), 1)
+        max_pages = max((len(files) for _, _, files in entries), default=1)
+        page_width = max(len(str(max_pages - 1)), 1)
+
+        created = 0
+        for pos, (create_date, illust_id, files) in enumerate(entries):
+            for page, fname in files:
+                link_name = f"{pos:0{pos_width}d}{_MINOR_SEPARATOR}{page:0{page_width}d}{_MAJOR_SEPARATOR}{fname}"
+                os.symlink(f"{all_prefix}/{fname}", view / 'all' / link_name)
+                created += 1
+
+        if bad_sidecars:
+            print(f"Note: {bad_sidecars} .json metadata sidecars failed to load "
+                  f"from {self._dl_dir} (were they deleted?).",
+                  file=sys.stderr)
+        print(f"Generated new works view: {created} symlinks in {view / 'all'}")
 
     def _write_counts(self, path: Path, rows: list[tuple], delim: str = '\t'):
         if not rows:

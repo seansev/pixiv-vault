@@ -59,6 +59,8 @@ def main():
                       "Generating view for metadata-only:")
             run_stage(vault.generate_artists_view,
                       "Generating view for works by artist:")
+            run_stage(vault.generate_new_view,
+                      "Generating view for new works feed:")
 
         if do_statistics:
             run_stage(vault.generate_statistics,
