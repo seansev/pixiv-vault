@@ -20,7 +20,7 @@ All settings are self-documented in the `.env` file. The most important of these
 
 ## Windows
 
-Windows is not officially supported at the moment, but it should work without too much issue since this is a Python-based project. There's no setup script, so you'll have to perform setup manually using the steps below.
+Windows is not officially supported at the moment, but it should work without too much issue since this is a Python-based project. There's no Batch/PowerShell setup script, so you'll either have to use bash or perform manual setup as described below. Bash can be installed on Windows using Git for Windows, or a development environment such as Cygwin.
 
 Additionally, the "views" feature, which generates directories containing sorted subsets of your downloaded files, will likely not work on Windows since it was designed around Linux symlinks. Make sure to disable views by setting `GENERATE_VIEWS=false` in your `.env` file.
 
