@@ -129,7 +129,9 @@ cmd_clean() {
         auth/venv/$VENV_BIN/playwright uninstall
     fi
     rm -rf auth/venv
+    rm -rf auth/__pycache__
     rm -rf pixiv/venv
+    rm -rf pixiv/__pycache__
 }
 
 cmd_restore() {
