@@ -13,11 +13,6 @@ warn() { printf "==> %s\n" "$1" >&2; }
 err()  { printf "==> %s\n" "$1" >&2; }
 ask()  { printf "\n ?  %s %s " "$1" "$2"; }
 
-usage() {
-    echo "Usage: $0 {setup|login|download}" >&2
-    exit 1
-}
-
 setup_venv() {
     dir="$1"
     if [ ! -d "$dir" ]; then
@@ -129,10 +124,74 @@ cmd_download() {
     exec pixiv/venv/$VENV_BIN/python pixiv/main.py
 }
 
+cmd_clean() {
+    if [ -x auth/venv/$VENV_BIN/playwright ]; then
+        auth/venv/$VENV_BIN/playwright uninstall
+    fi
+    rm -rf auth/venv
+    rm -rf pixiv/venv
+}
+
+cmd_restore() {
+    if command -v git >/dev/null 2>&1; then
+        git reset --hard HEAD
+    fi
+}
+
+cmd_repair() {
+    cmd_clean
+    cmd_restore
+    cmd_setup
+}
+
+cmd_reset() {
+    reset_conf=0
+    if [ -t 0 ]; then
+        ask "Reset pixiv-vault config? This will not delete your vault." "[y/N]"
+        read -r reply
+        case "$reply" in
+            [yY]|[yY][eE][sS]) reset_conf=1 ;;
+        esac
+    else
+        reset_conf=1
+    fi
+
+    [ "$reset_conf" = 1 ] || return 0
+
+    rm -f .env
+}
+
+cmd_purge() {
+    cmd_clean
+    cmd_reset
+}
+
+usage() {
+    echo "Usage: $0 {setup|login|download}" >&2
+    cat <<EOF 2>&1
+Usage: $0 {setup|login|download|clean|repair|reset|purge}
+  setup - install dependencies and create configuration
+  login - log into Pixiv and store credentials
+  download - start a download according to .env config
+  clean - remove installed files (setup must be run again)
+  repair - run clean, restore modified files, then run setup
+  reset - delete configuration
+  purge - macro for clean + reset
+
+Note: No command will ever remove downloaded works! Your vault is safe.
+      If you would like to remove your vault, simply delete the folder.
+EOF
+    exit 1
+}
+
 [ $# -eq 1 ] || usage
 case "$1" in
     setup) cmd_setup ;;
     login|auth) cmd_login ;;
     download) cmd_download ;;
+    clean) cmd_clean ;;
+    repair) cmd_repair ;;
+    reset) cmd_reset ;;
+    purge) cmd_purge ;;
     *)     usage ;;
 esac
