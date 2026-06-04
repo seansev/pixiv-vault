@@ -9,7 +9,6 @@ from pathlib import Path
 _BASE_DIR = Path(__file__).parent
 _OUTER_DIR = _BASE_DIR.parent
 _DEFAULT_VAULT = _OUTER_DIR / 'vault'
-_GALLERY_DL = _BASE_DIR / 'venv' / 'bin' / 'gallery-dl'
 
 _MINOR_SEPARATOR = '_'
 _MAJOR_SEPARATOR = '-'
@@ -60,6 +59,13 @@ class Vault:
         self._order_file = self._state_dir / _BOOKMARK_ORDER_FILE
         self._order_drop_thres = _BOOKMARK_ORDER_DROP_THRESHOLD
 
+        self._gallery_dl = (_BASE_DIR / 'venv' / 'Scripts' / 'gallery-dl.exe'
+                            if os.name == 'nt'
+                            else _BASE_DIR / 'venv' / 'bin' / 'gallery-dl')
+        if not self._gallery_dl.exists():
+            print("WARNING: gallery-dl not found. Download functions will be "
+                  "unavailable. Try running setup again.")
+
         # Set API URLs
         self._artworks_url_prefix = 'https://www.pixiv.net/artworks/'
         self._bookmarks_url = f'https://www.pixiv.net/users/{self._user_id}/bookmarks/artworks'
@@ -68,8 +74,8 @@ class Vault:
         self._index: dict[str, list[tuple[int, str]]] = None
 
         # Use a custom config and import our refresh token from GPPT
-        self._executable = [str(_GALLERY_DL)]
-        self._base_args = self._executable + [
+        self._executable = str(self._gallery_dl)
+        self._base_args = [self._executable] + [
             '-o', f'cache.file={str(self._state_dir / "cache.sqlite3")}',
             '-o', f'extractor.pixiv.refresh-token={self._refresh_token}',
         ]
@@ -117,6 +123,11 @@ class Vault:
         cursor: str | None = None
 
         self._dl_dir.mkdir(parents=True, exist_ok=True)
+
+        if not Path(self._executable).exists():
+            print(f"ERROR: Download helper not found. Checked "
+                  f"`{self._executable}'.", file=sys.stderr)
+            sys.exit(1)
 
         for i in range(_MAX_ATTEMPTS):
             if cursor is not None:
