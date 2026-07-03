@@ -169,8 +169,7 @@ cmd_purge() {
 }
 
 usage() {
-    echo "Usage: $0 {setup|login|download}" >&2
-    cat <<EOF 2>&1
+    cat <<EOF >&2
 Usage: $0 {setup|login|download|clean|repair|reset|purge}
   setup - install dependencies and create configuration
   login - log into Pixiv and store credentials
